@@ -2274,6 +2274,7 @@ int LIBUSB_CALL libusb_handle_events_locked(libusb_context *ctx,
 int LIBUSB_CALL libusb_pollfds_handle_timeouts(libusb_context *ctx);
 int LIBUSB_CALL libusb_get_next_timeout(libusb_context *ctx,
 	struct timeval *tv);
+struct timespec LIBUSB_CALL libusb_get_next_timeout_absolute(libusb_context *ctx);
 
 /** \ingroup libusb_poll
  * File descriptor for polling

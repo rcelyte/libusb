@@ -2625,6 +2625,39 @@ int API_EXPORTED libusb_get_next_timeout(libusb_context *ctx,
 	return 1;
 }
 
+struct timespec API_EXPORTED libusb_get_next_timeout_absolute(libusb_context *ctx)
+{
+	struct usbi_transfer *itransfer;
+	struct timespec next_timeout = { 0, 0 };
+
+	ctx = usbi_get_context(ctx);
+	if (usbi_using_timer(ctx))
+		return next_timeout;
+
+	usbi_mutex_lock(&ctx->flying_transfers_lock);
+	if (list_empty(&ctx->flying_transfers)) {
+		usbi_mutex_unlock(&ctx->flying_transfers_lock);
+		usbi_dbg(ctx, "no URBs, no timeout!");
+		return next_timeout;
+	}
+
+	/* find next transfer which hasn't already been processed as timed out */
+	for_each_transfer(ctx, itransfer) {
+		if (itransfer->timeout_flags & (USBI_TRANSFER_TIMEOUT_HANDLED | USBI_TRANSFER_OS_HANDLES_TIMEOUT))
+			continue;
+
+		/* if we've reached transfers of infinite timeout, we're done looking */
+		if (!TIMESPEC_IS_SET(&itransfer->timeout))
+			break;
+
+		next_timeout = itransfer->timeout;
+		break;
+	}
+	usbi_mutex_unlock(&ctx->flying_transfers_lock);
+
+	return next_timeout;
+}
+
 /** \ingroup libusb_poll
  * Register notification functions for file descriptor additions/removals.
  * These functions will be invoked for every new or removed file descriptor
